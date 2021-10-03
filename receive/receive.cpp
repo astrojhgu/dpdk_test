@@ -87,6 +87,11 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 			return retval;
 	}
 
+	retval = rte_eth_dev_set_mtu(0, 9000);
+	if (retval < 0)
+		return retval;
+
+
 	/* Starting Ethernet port. 8< */
 	retval = rte_eth_dev_start(port);
 	/* >8 End of starting of ethernet port. */
@@ -105,6 +110,7 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 			addr.addr_bytes[0], addr.addr_bytes[1],
 			addr.addr_bytes[2], addr.addr_bytes[3],
 			addr.addr_bytes[4], addr.addr_bytes[5]);
+
 
 	/* Enable RX in promiscuous mode for the Ethernet device. */
 	retval = rte_eth_promiscuous_enable(port);

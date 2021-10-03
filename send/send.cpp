@@ -64,7 +64,9 @@ port_init(struct rte_mempool *mbuf_pool)
 		if (retval < 0)
 			return retval;
 	}
-
+	retval = rte_eth_dev_set_mtu(0, 9000);
+	if (retval < 0)
+		return retval;
 	/* Start the Ethernet port. */
 	retval = rte_eth_dev_start(0);
 	if (retval < 0)
