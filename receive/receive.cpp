@@ -11,8 +11,8 @@
 #include <rte_lcore.h>
 #include <rte_mbuf.h>
 using namespace std;
-#define RX_RING_SIZE 1024
-#define TX_RING_SIZE 1024
+#define RX_RING_SIZE 2048
+#define TX_RING_SIZE 2048
 
 #define NUM_MBUFS 8191
 #define MBUF_CACHE_SIZE 250
@@ -21,7 +21,7 @@ using namespace std;
 /* Configuration of ethernet ports. 8<  */
 static const struct rte_eth_conf port_conf_default = {
 	.rxmode = {
-		.max_rx_pkt_len = RTE_ETHER_MAX_JUMBO_FRAME_LEN,
+		.max_rx_pkt_len = 9000,
 	},
 };
 /* >8 End of configuration of ethernet ports. */
@@ -169,7 +169,17 @@ lcore_main(void)
 			}
 			
 			for (int i=0;i<nb_rx;++i){
-				cout<<++total_rx<<" "<<(total_rx%32)<<std::endl;
+				cout<<++total_rx<<" "<<(total_rx%32)<<" "<<bufs[i]->pkt_len<<std::endl;
+				auto p=bufs[i];
+				auto cnt=1;
+				for(;p;++cnt){
+					cout<<cnt<<" "<<p->data_len<<std::endl;
+					for(int j=0;j<p->data_len;++j){
+						std::cout<<((char*)(p->buf_addr))[j];
+					}
+					std::cout<<std::endl;
+					p=p->next;
+				}				
 			}
 
 			for (int buf = 0; buf < nb_rx; buf++)

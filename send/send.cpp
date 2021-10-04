@@ -4,6 +4,8 @@ Author : Hox Zheng
 Date : 2017年 12月 31日 星期日 15:21:04 CST
 https://zenhox.github.io/2018/01/25/dpdk-pktSR/
  */
+
+#include <cassert>
 #include <cstdint>
 #include <cinttypes>
 #include <rte_eal.h>
@@ -17,8 +19,8 @@ https://zenhox.github.io/2018/01/25/dpdk-pktSR/
 #include <pthread.h>
 #include <cstring>
 
-#define RX_RING_SIZE 4096
-#define TX_RING_SIZE 4096
+#define RX_RING_SIZE 64
+#define TX_RING_SIZE 64
 #define NUM_MBUFS 8191
 #define MBUF_CACHE_SIZE 250
 #define BURST_SIZE 32
@@ -48,6 +50,16 @@ port_init(struct rte_mempool *mbuf_pool)
 	retval = rte_eth_dev_configure(0, rx_rings, tx_rings, &port_conf);
 	if (retval != 0)
 		return retval;
+	
+	
+	/* Allocate and set up 1 TX queue per Ethernet port. */
+	for (q = 0; q < tx_rings; q++) {
+		retval = rte_eth_tx_queue_setup(0, q, TX_RING_SIZE,
+				rte_eth_dev_socket_id(0), NULL);
+		if (retval < 0)
+			return retval;
+	}
+
 
 	/* Allocate and set up 1 RX queue per Ethernet port. */
 	for (q = 0; q < rx_rings; q++) {
@@ -57,13 +69,7 @@ port_init(struct rte_mempool *mbuf_pool)
 			return retval;
 	}
 
-	/* Allocate and set up 1 TX queue per Ethernet port. */
-	for (q = 0; q < tx_rings; q++) {
-		retval = rte_eth_tx_queue_setup(0, q, TX_RING_SIZE,
-				rte_eth_dev_socket_id(0), NULL);
-		if (retval < 0)
-			return retval;
-	}
+	
 	retval = rte_eth_dev_set_mtu(0, 9000);
 	if (retval < 0)
 		return retval;
@@ -85,7 +91,7 @@ port_init(struct rte_mempool *mbuf_pool)
  */
 int main(int argc, char *argv[])
 {
-	struct rte_mempool *mbuf_pool;
+	//struct rte_mempool *mbuf_pool;
 
 	/*进行总的初始话*/
 	int ret = rte_eal_init(argc, argv);
@@ -98,7 +104,7 @@ int main(int argc, char *argv[])
 
 	/* Creates a new mempool in memory to hold the mbufs. */
 	//分配内存池
-	mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", NUM_MBUFS,
+	auto mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", NUM_MBUFS,
 		MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 
 	//如果创建失败
@@ -124,16 +130,17 @@ int main(int argc, char *argv[])
 	
 
 	//对每个buf ， 给他们添加包
-	
+	auto mbuf_pool1=rte_mempool_lookup("MBUF_POOL");
+	assert(mbuf_pool1);
 	struct rte_mbuf * pkt[BURST_SIZE];
 	int i;
 	for(i=0;i<BURST_SIZE;i++) {
-		pkt[i] = rte_pktmbuf_alloc(mbuf_pool);
-		eth_hdr = rte_pktmbuf_mtod(pkt[i],struct rte_ether_hdr*);
+		pkt[i] = rte_pktmbuf_alloc(mbuf_pool1);
+		eth_hdr = rte_pktmbuf_mtod(pkt[i],rte_ether_hdr*);
 		eth_hdr->d_addr = d_addr;
 		eth_hdr->s_addr = s_addr;
 		eth_hdr->ether_type = ether_type;
-		msg = (struct Message*) (rte_pktmbuf_mtod(pkt[i],char*) + sizeof(struct rte_ether_hdr));
+		msg = (struct Message*) rte_pktmbuf_mtod_offset(pkt[i],char*, sizeof(struct rte_ether_hdr));
 		*msg = obj;
 		int pkt_size = sizeof(struct Message) + sizeof(struct rte_ether_hdr);
 		pkt[i]->data_len = pkt_size;
