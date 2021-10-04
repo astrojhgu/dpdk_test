@@ -171,9 +171,16 @@ lcore_main(void)
 			for (int i=0;i<nb_rx;++i){
 				cout<<++total_rx<<" "<<(total_rx%32)<<" "<<bufs[i]->pkt_len<<std::endl;
 				auto p=bufs[i];
-				auto cnt=1;
+				auto cnt=0;
 				for(;p;++cnt){
 					cout<<cnt<<" "<<p->data_len<<std::endl;
+					auto eth_hdr = rte_pktmbuf_mtod(p,rte_ether_hdr*);
+					if (cnt==0){
+						for(int j=0;j<6;++j){
+							std::cout<<std::hex<<(int)(eth_hdr->s_addr.addr_bytes[j])<<" "<<std::dec;
+						}
+					}
+					std::cout<<std::endl;
 					for(int j=0;j<p->data_len;++j){
 						std::cout<<((char*)(p->buf_addr))[j];
 					}
